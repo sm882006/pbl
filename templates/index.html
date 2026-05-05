@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Price Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <a href="/" class="header-logo" id="header-logo" title="Home - Refresh">
+                <span class="logo-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M8 14l2-3 2 2 4-5"/>
+                    </svg>
+                </span>
+                <span class="logo-text">Crypto Predictor</span>
+            </a>
+            <nav class="header-nav">
+                <a href="/information" class="header-tag header-tag-info" id="info-tag">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <span>Information</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <section class="title-search-row">
+            <h2 class="page-title">Cryptocurrency Price Analysis & Prediction</h2>
+            <form id="crypto-form" class="search-form">
+                <div class="input-group">
+                    <input type="text" id="crypto-name" class="form-control" placeholder="Enter cryptocurrency name (e.g., bitcoin, ethereum)" required>
+                    <button type="submit" class="btn btn-primary">Predict</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="market-snapshot" aria-label="Market snapshot">
+            <div class="card snapshot-card">
+                <div class="card-body">
+                    <div class="snapshot-header">
+                        <h5 class="card-title mb-0">Market Snapshot</h5>
+                        <span class="badge rounded-pill text-bg-info snapshot-badge">Live</span>
+                    </div>
+                    <div class="snapshot-grid">
+                        <div class="snapshot-item">
+                            <div class="snapshot-label">Currency</div>
+                            <div class="snapshot-value" id="snapshot-name">—</div>
+                        </div>
+                        <div class="snapshot-item">
+                            <div class="snapshot-label">Current Price</div>
+                            <div class="snapshot-value" id="snapshot-price">—</div>
+                        </div>
+                        <div class="snapshot-item">
+                            <div class="snapshot-label">Market Cap</div>
+                            <div class="snapshot-value" id="snapshot-market-cap">—</div>
+                        </div>
+                        <div class="snapshot-item">
+                            <div class="snapshot-label">24h Volume</div>
+                            <div class="snapshot-value" id="snapshot-volume">—</div>
+                        </div>
+                        <div class="snapshot-item">
+                            <div class="snapshot-label">Trend (7d)</div>
+                            <div class="snapshot-value">
+                                <span id="snapshot-trend" class="badge bg-secondary">—</span>
+                            </div>
+                        </div>
+                        <div class="snapshot-item">
+                            <div class="snapshot-label">Last Updated</div>
+                            <div class="snapshot-value" id="snapshot-updated">—</div>
+                        </div>
+                    </div>
+                    <div class="snapshot-hint">Tip: try <span class="hint-chip">bitcoin</span>, <span class="hint-chip">ethereum</span>, <span class="hint-chip">solana</span></div>
+                    <div class="snapshot-actions mt-3">
+                        <button type="button" id="btn-download-pdf" class="btn btn-outline-light btn-sm me-2">
+                            Download PDF
+                        </button>
+                        <button type="button" id="btn-buy-coin" class="btn btn-success btn-sm">
+                            Buy Coin
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="price-chart" aria-label="Original price graph">
+            <div class="card chart-card">
+                <div class="card-body">
+                    <div class="chart-header">
+                        <h5 class="card-title mb-0">Original Price Graph (Last 30 Days)</h5>
+                        <span class="chart-subtitle" id="chart-subtitle">Enter a coin and click Predict</span>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="priceChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="top10-section" aria-label="Top 10 cryptocurrencies">
+            <div class="card top10-card">
+                <div class="card-body">
+                    <div class="top10-header">
+                        <h5 class="card-title mb-0">Top 10 Cryptocurrencies (Live)</h5>
+                        <span class="top10-subtitle">Click any row to open details</span>
+                    </div>
+                    <div id="top10-error" class="alert alert-danger d-none mb-3"></div>
+                    <div class="table-responsive">
+                        <table class="table crypto-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Symbol</th>
+                                    <th scope="col">Today Price</th>
+                                    <th scope="col">Market Cap</th>
+                                    <th scope="col">24h Volume</th>
+                                    <th scope="col">24h %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="top10-body">
+                                <tr><td colspan="7" class="text-center text-muted py-4">Loading live market data…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div id="results" class="d-none">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Results</h5>
+                    <p><strong>Current price (latest close):</strong> $<span id="current-price"></span></p>
+                    <p><strong>Trend vs last close (7-day path):</strong> <span id="trend" class="badge bg-success"></span></p>
+                    <p class="text-muted small mb-2">Forecast is from this site’s model only — not guaranteed, and it will usually differ from other sites or “target price” headlines.</p>
+                    <h6 class="small text-uppercase text-muted mb-2">Next 7 daily closes (model)</h6>
+                    <ul id="future-list" class="mb-0"></ul>
+                </div>
+            </div>
+        </div>
+        <div id="error" class="alert alert-danger d-none"></div>
+    </div>
+
+    <div class="dora-widget">
+        <!-- PANEL -->
+        <div id="dora-panel" class="dora-panel" aria-live="polite" role="dialog" aria-label="Dora chat assistant">
+            <div class="dora-panel-header">
+                <div class="dora-avatar-mini">
+                    <!-- mini bot SVG -->
+                    <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="8" y="12" width="24" height="18" rx="6" fill="url(#hg)" />
+                        <circle cx="15" cy="20" r="3" fill="#0d101f" />
+                        <circle cx="25" cy="20" r="3" fill="#0d101f" />
+                        <circle cx="16" cy="19" r="1" fill="#6ee7f7" />
+                        <circle cx="26" cy="19" r="1" fill="#6ee7f7" />
+                        <rect x="17" y="25" width="6" height="2" rx="1" fill="#0d101f" opacity=".6" />
+                        <rect x="16" y="8" width="3" height="6" rx="1.5" fill="#6ee7f7" />
+                        <circle cx="17.5" cy="8" r="2" fill="#a78bfa" />
+                        <rect x="4" y="18" width="4" height="8" rx="2" fill="url(#hg)" opacity=".7" />
+                        <rect x="32" y="18" width="4" height="8" rx="2" fill="url(#hg)" opacity=".7" />
+                        <defs>
+                            <linearGradient id="hg" x1="8" y1="12" x2="32" y2="30" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#6ee7f7" />
+                                <stop offset="100%" stop-color="#a78bfa" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="dora-header-text">
+                    <div class="dora-panel-title">Dora AI</div>
+                    <div class="dora-status">
+                        <span class="dora-status-dot"></span> Online · always here
+                    </div>
+                </div>
+                <button class="dora-close" id="dora-close-btn" aria-label="Close">
+                    ✕
+                </button>
+            </div>
+
+            <div class="dora-messages" id="dora-messages">
+                <div class="dora-msg">
+                    <div class="dora-msg-bubble">
+                        Hey! 👋 I'm Dora, your AI assistant. How can I help you today?
+                    </div>
+                </div>
+            </div>
+
+            <div class="dora-panel-footer">
+                <input class="dora-input" id="dora-input" type="text" placeholder="Ask me anything…"
+                    autocomplete="off" />
+                <button class="dora-send" id="dora-send-btn" aria-label="Send">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13" />
+                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- FAB BUTTON -->
+        <div style="position: relative">
+            <button id="dora-fab" class="dora-fab" type="button" aria-label="Open Dora assistant" aria-expanded="false">
+                <div class="dora-fab-body">
+                    <!-- Bot SVG icon -->
+                    <svg class="dora-bot-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="7" y="13" width="26" height="19" rx="7" fill="url(#grad1)" />
+                        <circle cx="14.5" cy="21.5" r="3.5" fill="#0d101f" />
+                        <circle cx="25.5" cy="21.5" r="3.5" fill="#0d101f" />
+                        <circle cx="15.8" cy="20.3" r="1.2" fill="#6ee7f7" />
+                        <circle cx="26.8" cy="20.3" r="1.2" fill="#6ee7f7" />
+                        <rect x="16" y="27" width="8" height="2.2" rx="1.1" fill="#0d101f" opacity=".5" />
+                        <!-- antenna -->
+                        <rect x="18.5" y="6" width="3" height="8" rx="1.5" fill="#6ee7f7" opacity=".9" />
+                        <circle cx="20" cy="6" r="2.5" fill="#a78bfa" />
+                        <circle cx="20" cy="6" r="1" fill="#f0f6ff" />
+                        <!-- arms -->
+                        <rect x="2" y="19" width="5" height="9" rx="2.5" fill="url(#grad2)" opacity=".75" />
+                        <rect x="33" y="19" width="5" height="9" rx="2.5" fill="url(#grad2)" opacity=".75" />
+                        <defs>
+                            <linearGradient id="grad1" x1="7" y1="13" x2="33" y2="32" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#6ee7f7" />
+                                <stop offset="60%" stop-color="#818cf8" />
+                                <stop offset="100%" stop-color="#a78bfa" />
+                            </linearGradient>
+                            <linearGradient id="grad2" x1="0" y1="19" x2="5" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#6ee7f7" />
+                                <stop offset="100%" stop-color="#a78bfa" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+            </button>
+            <!-- online ping -->
+            <div class="dora-ping">
+                <div class="dora-ping-ring"></div>
+                <div class="dora-ping-dot"></div>
+            </div>
+        </div>
+
+        <!-- hover label -->
+        <div class="dora-label">Chat with Dora</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        (function () {
+            const fab = document.getElementById("dora-fab");
+            const panel = document.getElementById("dora-panel");
+            const closeBtn = document.getElementById("dora-close-btn");
+            const sendBtn = document.getElementById("dora-send-btn");
+            const chatInput = document.getElementById("dora-input");
+            const messages = document.getElementById("dora-messages");
+            if (!fab || !panel || !closeBtn || !sendBtn || !chatInput || !messages) return;
+
+            let open = false;
+
+            function togglePanel() {
+                open = !open;
+                panel.classList.toggle("dora-panel--open", open);
+                fab.setAttribute("aria-expanded", open);
+                if (open) {
+                    setTimeout(() => chatInput.focus(), 250);
+                }
+            }
+
+            fab.addEventListener("click", togglePanel);
+            closeBtn.addEventListener("click", togglePanel);
+
+            function addMessage(text) {
+                const msg = document.createElement("div");
+                msg.className = "dora-msg";
+                const bubble = document.createElement("div");
+                bubble.className = "dora-msg-bubble";
+                bubble.textContent = text;
+                msg.appendChild(bubble);
+                messages.appendChild(msg);
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            function showTyping() {
+                const typing = document.createElement("div");
+                typing.className = "dora-msg";
+                typing.id = "dora-typing";
+                typing.innerHTML = `<div class="dora-msg-bubble dora-typing">
+                <span class="dora-dot"></span><span class="dora-dot"></span><span class="dora-dot"></span>
+                </div>`;
+                messages.appendChild(typing);
+                messages.scrollTop = messages.scrollHeight;
+            }
+
+            function removeTyping() {
+                const t = document.getElementById("dora-typing");
+                if (t) t.remove();
+            }
+
+            async function sendMessage() {
+                const text = chatInput.value.trim();
+                if (!text) return;
+
+                const userMsg = document.createElement("div");
+                userMsg.className = "dora-msg";
+                userMsg.style.justifyContent = "flex-end";
+                const userBubble = document.createElement("div");
+                userBubble.className = "dora-msg-bubble dora-msg-bubble--user";
+                userBubble.textContent = text;
+                userMsg.appendChild(userBubble);
+                messages.appendChild(userMsg);
+                messages.scrollTop = messages.scrollHeight;
+                chatInput.value = "";
+
+                showTyping();
+                try {
+                    const res = await fetch("/api/chat", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message: text }),
+                    });
+                    const data = await res.json();
+                    removeTyping();
+                    if (!res.ok) {
+                        addMessage(
+                            data && data.error
+                                ? data.error
+                                : "Could not get AI response.",
+                        );
+                        return;
+                    }
+                    addMessage(data.reply || "No response received.");
+                } catch (_) {
+                    removeTyping();
+                    addMessage("Network error. Please try again.");
+                }
+            }
+
+            sendBtn.addEventListener("click", sendMessage);
+            chatInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") sendMessage();
+            });
+        })();
+    </script>
+</body>
+</html>

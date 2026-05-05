@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crypto Information</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body class="info-page">
+    <header class="site-header">
+        <div class="header-inner">
+            <a href="/" class="header-logo" title="Back to main page">
+                <span class="logo-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M8 14l2-3 2 2 4-5" />
+                    </svg>
+                </span>
+                <span class="logo-text">Crypto Predictor</span>
+            </a>
+            <nav class="header-nav">
+                <button id="info-search-toggle" class="info-search-toggle" type="button" aria-label="Search">
+                    <span class="info-search-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="7" />
+                            <line x1="16.65" y1="16.65" x2="21" y2="21" />
+                        </svg>
+                    </span>
+                </button>
+                <form id="info-search-form" class="info-search-inline" autocomplete="off">
+                    <input type="text" id="info-search" class="info-search-inline-input"
+                        placeholder="Search coin or topic (ex: bitcoin, market cap)" />
+                </form>
+            </nav>
+        </div>
+    </header>
+
+    <main class="info-main">
+        <div class="info-center">
+            <div id="info-message" class="info-hint text-center">
+                Type a coin id like <strong>bitcoin</strong> or
+                <strong>ethereum</strong> in the search.
+            </div>
+
+            <section id="info-result" class="info-result d-none" aria-live="polite">
+                <div class="card info-card">
+                    <div class="card-body">
+                        <div class="info-header">
+                            <div class="info-title-block">
+                                <div class="info-coin-main">
+                                    <img id="info-coin-image" alt="" class="info-coin-image d-none" />
+                                    <div>
+                                        <h2 id="info-coin-name" class="info-coin-name mb-0"></h2>
+                                        <div id="info-coin-symbol" class="info-coin-symbol text-muted"></div>
+                                    </div>
+                                </div>
+                                <div id="info-coin-rank" class="info-badge text-end"></div>
+                            </div>
+                            <div class="info-price-block">
+                                <div class="info-price-label">Current price (USD)</div>
+                                <div id="info-coin-price" class="info-price-value"></div>
+                            </div>
+                        </div>
+
+                        <div class="info-grid mt-3">
+                            <div class="info-metric">
+                                <div class="info-metric-label">Market cap</div>
+                                <div id="info-market-cap" class="info-metric-value"></div>
+                            </div>
+                            <div class="info-metric">
+                                <div class="info-metric-label">24h volume</div>
+                                <div id="info-volume" class="info-metric-value"></div>
+                            </div>
+                            <div class="info-metric">
+                                <div class="info-metric-label">Circulating supply</div>
+                                <div id="info-circ-supply" class="info-metric-value"></div>
+                            </div>
+                            <div class="info-metric">
+                                <div class="info-metric-label">Max supply</div>
+                                <div id="info-max-supply" class="info-metric-value"></div>
+                            </div>
+                        </div>
+
+                        <div class="info-changes mt-3">
+                            <div class="info-change" id="info-change-24h"></div>
+                            <div class="info-change" id="info-change-7d"></div>
+                            <div class="info-change" id="info-change-30d"></div>
+                        </div>
+
+                        <div id="info-links" class="mt-3"></div>
+
+                        <div id="info-description" class="info-description mt-3"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            const form = document.getElementById("info-search-form");
+            const toggle = document.getElementById("info-search-toggle");
+            const input = document.getElementById("info-search");
+            const msg = document.getElementById("info-message");
+            const result = document.getElementById("info-result");
+            if (!form || !toggle || !input || !msg || !result) return;
+
+            toggle.addEventListener("click", function () {
+                form.classList.toggle("info-search-inline--open");
+                if (form.classList.contains("info-search-inline--open")) {
+                    input.focus();
+                }
+            });
+
+            toggle.addEventListener("mouseenter", function () {
+                toggle.classList.add("info-search-toggle--hover");
+            });
+            toggle.addEventListener("mouseleave", function () {
+                toggle.classList.remove("info-search-toggle--hover");
+            });
+
+            function setMessage(text, isError) {
+                msg.textContent = text;
+                msg.classList.toggle("text-danger", !!isError);
+                msg.classList.remove("d-none");
+            }
+
+            function fmtUsd(n, fallback = "—") {
+                if (n == null || n === "") return fallback;
+                const num = Number(n);
+                if (!Number.isFinite(num)) return fallback;
+                return new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 2,
+                }).format(num);
+            }
+
+            function fmtBigUsd(n) {
+                if (n == null || n === "") return "—";
+                const num = Number(n);
+                if (!Number.isFinite(num)) return "—";
+                return new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: "USD",
+                    notation: "compact",
+                    maximumFractionDigits: 2,
+                }).format(num);
+            }
+
+            function fmtNumber(n) {
+                if (n == null || n === "") return "—";
+                const num = Number(n);
+                if (!Number.isFinite(num)) return "—";
+                return new Intl.NumberFormat(undefined, {
+                    maximumFractionDigits: 0,
+                }).format(num);
+            }
+
+            function fmtPct(label, value) {
+                if (value == null || value === "") return "";
+                const num = Number(value);
+                if (!Number.isFinite(num)) return "";
+                const cls = num >= 0 ? "pct-up" : "pct-down";
+                return `<span class="${cls}">${label}: ${num.toFixed(2)}%</span>`;
+            }
+
+            function renderInfo(data) {
+                if (!data || data.error) {
+                    setMessage(
+                        data && data.error ? data.error : "No data found.",
+                        true,
+                    );
+                    result.classList.add("d-none");
+                    return;
+                }
+                msg.classList.add("d-none");
+
+                const img = document.getElementById("info-coin-image");
+                if (img) {
+                    if (data.image) {
+                        img.src = data.image;
+                        img.classList.remove("d-none");
+                    } else {
+                        img.classList.add("d-none");
+                    }
+                }
+
+                const nameEl = document.getElementById("info-coin-name");
+                if (nameEl) nameEl.textContent = data.name || "";
+                const symEl = document.getElementById("info-coin-symbol");
+                if (symEl)
+                    symEl.textContent = data.symbol ? data.symbol.toUpperCase() : "";
+                const rankEl = document.getElementById("info-coin-rank");
+                if (rankEl)
+                    rankEl.textContent = data.market_cap_rank
+                        ? `Rank #${data.market_cap_rank}`
+                        : "";
+
+                const priceEl = document.getElementById("info-coin-price");
+                if (priceEl) priceEl.textContent = fmtUsd(data.current_price_usd);
+                const mcEl = document.getElementById("info-market-cap");
+                if (mcEl) mcEl.textContent = fmtBigUsd(data.market_cap_usd);
+                const volEl = document.getElementById("info-volume");
+                if (volEl) volEl.textContent = fmtBigUsd(data.volume_24h_usd);
+                const circEl = document.getElementById("info-circ-supply");
+                if (circEl) circEl.textContent = fmtNumber(data.circulating_supply);
+                const maxEl = document.getElementById("info-max-supply");
+                if (maxEl) maxEl.textContent = fmtNumber(data.max_supply);
+
+                const c24 = document.getElementById("info-change-24h");
+                if (c24) c24.innerHTML = fmtPct("24h", data.price_change_24h_pct);
+                const c7 = document.getElementById("info-change-7d");
+                if (c7) c7.innerHTML = fmtPct("7d", data.price_change_7d_pct);
+                const c30 = document.getElementById("info-change-30d");
+                if (c30) c30.innerHTML = fmtPct("30d", data.price_change_30d_pct);
+
+                const links = document.getElementById("info-links");
+                if (links) {
+                    if (data.homepage) {
+                        const safeUrl = data.homepage;
+                        links.innerHTML = `<a href="${safeUrl}" target="_blank" rel="noopener" class="btn btn-outline-light btn-sm">Official website</a>`;
+                    } else {
+                        links.innerHTML = "";
+                    }
+                }
+
+                const desc = document.getElementById("info-description");
+                if (desc) {
+                    if (data.description_html) {
+                        desc.innerHTML = data.description_html;
+                    } else {
+                        desc.textContent = "No description available.";
+                    }
+                }
+
+                result.classList.remove("d-none");
+            }
+
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+                const raw = input.value.trim();
+                if (!raw) {
+                    setMessage("Please type a coin id (for example: bitcoin).", true);
+                    result.classList.add("d-none");
+                    return;
+                }
+
+                setMessage("Loading information…", false);
+                result.classList.add("d-none");
+
+                fetch("/api/coin-info?id=" + encodeURIComponent(raw))
+                    .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+                    .then(({ ok, data }) => {
+                        if (!ok) {
+                            renderInfo({
+                                error:
+                                    data && data.error
+                                        ? data.error
+                                        : "Failed to load information.",
+                            });
+                            return;
+                        }
+                        renderInfo(data);
+                    })
+                    .catch(() => {
+                        renderInfo({
+                            error: "Failed to load information. Please try again.",
+                        });
+                    });
+            });
+        })();
+    </script>
+</body>
+
+</html>
